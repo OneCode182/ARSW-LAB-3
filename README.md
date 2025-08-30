@@ -1,20 +1,57 @@
+### ARSW - Arquitecturas de Software | Escuela Colombiana de Ingeniería
+### Laboratorio No.3 | Programación concurrente, condiciones de carrera y sincronización de hilos. 
 
-## Escuela Colombiana de Ingeniería
-### Arquitecturas de Software – ARSW
+___
+
+**Integrantes (Grupo 1)**
+  - Sergio Andrey Silva Rodríguez
+  - Gerónimo Martínez Núñez
 
 
-#### Ejercicio – programación concurrente, condiciones de carrera y sincronización de hilos. EJERCICIO INDIVIDUAL O EN PAREJAS.
-
-##### Parte I – Antes de terminar la clase.
+#### Parte I – Antes de terminar la clase.
 
 Control de hilos con wait/notify. Productor/consumidor.
 
-1. Revise el funcionamiento del programa y ejecútelo. Mientras esto ocurren, ejecute jVisualVM y revise el consumo de CPU del proceso correspondiente. A qué se debe este consumo?, cual es la clase responsable?
-2. Haga los ajustes necesarios para que la solución use más eficientemente la CPU, teniendo en cuenta que -por ahora- la producción es lenta y el consumo es rápido. Verifique con JVisualVM que el consumo de CPU se reduzca.
-3. Haga que ahora el productor produzca muy rápido, y el consumidor consuma lento. Teniendo en cuenta que el productor conoce un límite de Stock (cuantos elementos debería tener, a lo sumo en la cola), haga que dicho límite se respete. Revise el API de la colección usada como cola para ver cómo garantizar que dicho límite no se supere. Verifique que, al poner un límite pequeño para el 'stock', no haya consumo alto de CPU ni errores.
+**1. Revise el funcionamiento del programa y ejecútelo. Mientras esto ocurren, ejecute jVisualVM y revise el consumo de CPU del proceso correspondiente. A qué se debe este consumo?, cual es la clase responsable?**
+
+![](img/part1_1.png)
+
+La clase `Consumer` es la responsable del alto consumo de *CPU*
+
+```java
+public static void main(String[] args) {
+	
+	Queue<Integer> queue=new LinkedBlockingQueue<>();
+
+	// 1) Genera el numero aleatorio y espera 1 segundo
+	new Producer(queue,Long.MAX_VALUE).start();
+	
+	// 2) Realiza un sleep de 5 segundos
+	
+	// 3) Saca el número de la cola sin esperar nada TODO DE UNA
+	new Consumer(queue).start();  
+}
+```
+
+Al crear `Producer` y tener un pequeño *sleep* aliviana al *CPU* al igual que el *sleep* intermedio de 5 segundos. A diferencia que consumer toma los recursos de una y no hace espera alguna tomando recursos sin limite y aumentando el consumo. 
 
 
-##### Parte II. – Antes de terminar la clase.
+> [!IMPORTANT]
+> Al estar tanto `Producer` como `Consumer` con bucles infinitos, el *CPU* no se aliviana sino que se estresa constantemente. También `Consumer` preguntando constantemente si hay valor en la cola y no esperando de manera eficiente.
+
+
+**2. Haga los ajustes necesarios para que la solución use más eficientemente la CPU, teniendo en cuenta que -por ahora- la producción es lenta y el consumo es rápido. Verifique con JVisualVM que el consumo de CPU se reduzca.**
+
+
+
+
+
+**3. Haga que ahora el productor produzca muy rápido, y el consumidor consuma lento. Teniendo en cuenta que el productor conoce un límite de Stock (cuantos elementos debería tener, a lo sumo en la cola), haga que dicho límite se respete. Revise el API de la colección usada como cola para ver cómo garantizar que dicho límite no se supere. Verifique que, al poner un límite pequeño para el 'stock', no haya consumo alto de CPU ni errores.**
+
+
+---
+
+#### Parte II. – Antes de terminar la clase.
 
 Teniendo en cuenta los conceptos vistos de condición de carrera y sincronización, haga una nueva versión -más eficiente- del ejercicio anterior (el buscador de listas negras). En la versión actual, cada hilo se encarga de revisar el host en la totalidad del subconjunto de servidores que le corresponde, de manera que en conjunto se están explorando la totalidad de servidores. Teniendo esto en cuenta, haga que:
 
