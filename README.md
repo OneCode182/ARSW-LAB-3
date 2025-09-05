@@ -42,9 +42,7 @@ Al crear `Producer` y tener un pequeño *sleep* aliviana al *CPU* al igual que e
 
 **2. Haga los ajustes necesarios para que la solución use más eficientemente la CPU, teniendo en cuenta que -por ahora- la producción es lenta y el consumo es rápido. Verifique con JVisualVM que el consumo de CPU se reduzca.**
 
-
-
-
+![](img/part1_2.png)
 
 **3. Haga que ahora el productor produzca muy rápido, y el consumidor consuma lento. Teniendo en cuenta que el productor conoce un límite de Stock (cuantos elementos debería tener, a lo sumo en la cola), haga que dicho límite se respete. Revise el API de la colección usada como cola para ver cómo garantizar que dicho límite no se supere. Verifique que, al poner un límite pequeño para el 'stock', no haya consumo alto de CPU ni errores.**
 
@@ -57,6 +55,10 @@ Teniendo en cuenta los conceptos vistos de condición de carrera y sincronizaci�
 
 - La búsqueda distribuida se detenga (deje de buscar en las listas negras restantes) y retorne la respuesta apenas, en su conjunto, los hilos hayan detectado el número de ocurrencias requerido que determina si un host es confiable o no (_BLACK_LIST_ALARM_COUNT_).
 - Lo anterior, garantizando que no se den condiciones de carrera.
+
+> [!IMPORTANT]
+> Codigo está en paquete `lab1` donde esta la solución a esta _Parte II_
+
 
 ##### Parte III. – Avance para el martes, antes de clase.
 
@@ -73,13 +75,44 @@ Sincronización y Dead-Locks.
 
 2. Revise el código e identifique cómo se implemento la funcionalidad antes indicada. Dada la intención del juego, un invariante debería ser que la sumatoria de los puntos de vida de todos los jugadores siempre sea el mismo(claro está, en un instante de tiempo en el que no esté en proceso una operación de incremento/reducción de tiempo). Para este caso, para N jugadores, cual debería ser este valor?.
 
+
+Cuando hay un combate
+```java
+i2.changeHealth(i2.getHealth() - defaultDamageValue);
+this.health += defaultDamageValue;
+```
+El que ataca gana $x$ puntos y el afectado pierte $x$ puntos.
+
+> [!NOTE]
+> Se conserva la suma total de la salud del equipo (no se crea ni destruye “energía”).
+
+Cada inmortal empieza con `DEFAULT_IMMORTAL_HEALTH = 100`
+
+Entonces si hay $N$ inmortales, el valor invariante es:
+$$
+Invariante = 100N
+$$
+
 3. Ejecute la aplicación y verifique cómo funcionan las opción ‘pause and check’. Se cumple el invariante?.
+
+**Ejemplo:** 
+Con el invariante, la suma de salud deberia dar $300$ (pues hay $N = 3$ Inmortales)
+
+![](img/part3_3.png)
+
+_NOTA: No se cumple_
 
 4. Una primera hipótesis para que se presente la condición de carrera para dicha función (pause and check), es que el programa consulta la lista cuyos valores va a imprimir, a la vez que otros hilos modifican sus valores. Para corregir esto, haga lo que sea necesario para que efectivamente, antes de imprimir los resultados actuales, se pausen todos los demás hilos. Adicionalmente, implemente la opción ‘resume’.
 
-5. Verifique nuevamente el funcionamiento (haga clic muchas veces en el botón). Se cumple o no el invariante?.
+Hay _condicion carrera_ en la opcion _pause and check_. Los hilos modifican la lista al mismo tiempo que cuando se intenta leer.
 
-6. Identifique posibles regiones críticas en lo que respecta a la pelea de los inmortales. Implemente una estrategia de bloqueo que evite las condiciones de carrera. Recuerde que si usted requiere usar dos o más ‘locks’ simultáneamente, puede usar bloques sincronizados anidados:
+Implementación de acciones de los botones _pause and check_ y _resume_
+
+**5. Verifique nuevamente el funcionamiento (haga clic muchas veces en el botón). Se cumple o no el invariante?.**
+
+_NOTA: Se sigue sin cumplir_
+
+**6. Identifique posibles regiones críticas en lo que respecta a la pelea de los inmortales. Implemente una estrategia de bloqueo que evite las condiciones de carrera. Recuerde que si usted requiere usar dos o más ‘locks’ simultáneamente, puede usar bloques sincronizados anidados:**
 
 	```java
 	synchronized(locka){
@@ -89,17 +122,68 @@ Sincronización y Dead-Locks.
 	}
 	```
 
-7. Tras implementar su estrategia, ponga a correr su programa, y ponga atención a si éste se llega a detener. Si es así, use los programas jps y jstack para identificar por qué el programa se detuvo.
+Solución sobre metodo `fight` de la clase `Inmortal.java`
+```java
+synchronized (first) {
+	synchronized (second) {
+		if (i2.getHealth() > 0) {
+			i2.changeHealth(i2.getHealth() - defaultDamageValue);
+			this.health += defaultDamageValue;
+			updateCallback.processReport("Fight: " + this + " vs " + i2 + "\n");
+		} else {
+			updateCallback.processReport(this + " says: " + i2 + " is already dead!\n");
+		}
+	}
+}
+```
 
-8. Plantee una estrategia para corregir el problema antes identificado (puede revisar de nuevo las páginas 206 y 207 de _Java Concurrency in Practice_).
+Lo que se ocurre es que se clasifica sobre un Inmortal #1 y otro #2. Para así bloquear sus datos y poder hacer la lógica. Algo que antes no se hacía así y todos accedian a los datos al tiempo y ocurria la _condicion carrera_.
 
-9. Una vez corregido el problema, rectifique que el programa siga funcionando de manera consistente cuando se ejecutan 100, 1000 o 10000 inmortales. Si en estos casos grandes se empieza a incumplir de nuevo el invariante, debe analizar lo realizado en el paso 4.
 
-10. Un elemento molesto para la simulación es que en cierto punto de la misma hay pocos 'inmortales' vivos realizando peleas fallidas con 'inmortales' ya muertos. Es necesario ir suprimiendo los inmortales muertos de la simulación a medida que van muriendo. Para esto:
-	* Analizando el esquema de funcionamiento de la simulación, esto podría crear una condición de carrera? Implemente la funcionalidad, ejecute la simulación y observe qué problema se presenta cuando hay muchos 'inmortales' en la misma. Escriba sus conclusiones al respecto en el archivo RESPUESTAS.txt.
-	* Corrija el problema anterior __SIN hacer uso de sincronización__, pues volver secuencial el acceso a la lista compartida de inmortales haría extremadamente lenta la simulación.
+**7. Tras implementar su estrategia, ponga a correr su programa, y ponga atención a si éste se llega a detener. Si es así, use los programas jps y jstack para identificar por qué el programa se detuvo.**
+> [!IMPORTANT]
+> No se detuvo el programa
 
-11. Para finalizar, implemente la opción STOP.
+**8. Plantee una estrategia para corregir el problema antes identificado (puede revisar de nuevo las páginas 206 y 207 de _Java Concurrency in Practice_).**
+
+**9. Una vez corregido el problema, rectifique que el programa siga funcionando de manera consistente cuando se ejecutan 100, 1000 o 10000 inmortales. Si en estos casos grandes se empieza a incumplir de nuevo el invariante, debe analizar lo realizado en el paso 4.**
+
+##### Caso 1: $100$ Inmortales
+$Invariante = 10000$
+![](img/part3_9-1.png)
+
+
+##### Caso 2: $1000$ Inmortales
+$Invariante = 100000$
+![](img/part3_9-2.png)
+
+
+##### Caso 3: $10000$ Inmortales
+$Invariante = 1000000$
+![](img/part3_9-3.png)
+
+> [!NOTE]
+> En este ultimo caso, la complejidad de ejecución aumenta puesto que toca crear muchos inmortales en memoria.
+
+**10. Un elemento molesto para la simulación es que en cierto punto de la misma hay pocos 'inmortales' vivos realizando peleas fallidas con 'inmortales' ya muertos. Es necesario ir suprimiendo los inmortales muertos de la simulación a medida que van muriendo. Para esto:**
+	
+- **Analizando el esquema de funcionamiento de la simulación, esto podría crear una condición de carrera? Implemente la funcionalidad, ejecute la simulación y observe qué problema se presenta cuando hay muchos 'inmortales' en la misma. Escriba sus conclusiones al respecto en el archivo RESPUESTAS.txt.**
+
+		
+	Si, se puede crear una condición carrera porque varios hilos acceden en simultaneo a la lista immortalsPopulation
+	Es un mismo instante de tiempo, un hilo puede estar leyendo la lista (para elegir otro Inmortal) mientras otro hilo puede eliminar a un inmortal muerto, lo que modifica la estructura de como estaba
+
+
+- **Corrija el problema anterior __SIN hacer uso de sincronización__, pues volver secuencial el acceso a la lista compartida de inmortales haría extremadamente lenta la simulación.**
+
+
+**11. Para finalizar, implemente la opción STOP.**
+
+`btnStop` implementado
+```java
+immortals.clear();
+btnStart.setEnabled(true);
+```
 
 <!--
 ### Criterios de evaluación

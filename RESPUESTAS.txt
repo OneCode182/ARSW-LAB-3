@@ -1,0 +1,3 @@
+*** PUNTO 10 ***
+Si, se puede crear una condición carrera porque varios hilos acceden en simultaneo a la lista immortalsPopulation
+Es un mismo instante de tiempo, un hilo puede estar leyendo la lista (para elegir otro Inmortal) mientras otro hilo puede eliminar a un inmortal muerto, lo que modifica la estructura de como esta

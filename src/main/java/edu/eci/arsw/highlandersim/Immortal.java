@@ -68,6 +68,7 @@ public class Immortal extends Thread {
 
     }
 
+    /**
     public void fight(Immortal i2) {
 
         if (i2.getHealth() > 0) {
@@ -78,7 +79,33 @@ public class Immortal extends Thread {
             updateCallback.processReport(this + " says:" + i2 + " is already dead!\n");
         }
 
+    }**/
+
+    public void fight(Immortal i2) {
+        Immortal first, second;
+
+        // Definir un orden global de locks
+        if (this.hashCode() < i2.hashCode()) {
+            first = this;
+            second = i2;
+        } else {
+            first = i2;
+            second = this;
+        }
+
+        synchronized (first) {
+            synchronized (second) {
+                if (i2.getHealth() > 0) {
+                    i2.changeHealth(i2.getHealth() - defaultDamageValue);
+                    this.health += defaultDamageValue;
+                    updateCallback.processReport("Fight: " + this + " vs " + i2 + "\n");
+                } else {
+                    updateCallback.processReport(this + " says: " + i2 + " is already dead!\n");
+                }
+            }
+        }
     }
+
 
     public void changeHealth(int v) {
         health = v;
