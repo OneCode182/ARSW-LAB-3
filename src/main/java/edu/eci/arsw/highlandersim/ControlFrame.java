@@ -87,10 +87,10 @@ public class ControlFrame extends JFrame {
         JButton btnPauseAndCheck = new JButton("Pause and check");
         btnPauseAndCheck.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
+                Immortal.paused = true;
 
-                /*
-				 * COMPLETAR
-                 */
+                try { Thread.sleep(50); } catch (InterruptedException ex) {}
+
                 int sum = 0;
                 for (Immortal im : immortals) {
                     sum += im.getHealth();
@@ -108,10 +108,10 @@ public class ControlFrame extends JFrame {
 
         btnResume.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                /**
-                 * IMPLEMENTAR
-                 */
-
+                synchronized (Immortal.class) {
+                    Immortal.paused = false;
+                    Immortal.class.notifyAll();
+                }
             }
         });
 
